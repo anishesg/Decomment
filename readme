@@ -2,7 +2,7 @@ Assignment 1 readme File
 
 ------------------------------------------------------------------------
 What is your name?
-
+Anish Kataria
 
 
 ------------------------------------------------------------------------
@@ -12,7 +12,9 @@ in the "Policies" web page (also available on armlab in the file
 ~cos217/AuthorizedSourcesList ) to this section of the readme file,
 and edit it as appropriate.
 
-
+The course's lectures.
+The course's precepts.
+The course's website.
 
 ------------------------------------------------------------------------
 What unauthorized sources of information did you use to complete the
@@ -26,7 +28,7 @@ interaction, may additionally require the interaction being reported
 to the Committee on Discipline. Write "None" if you used no
 unauthorized sources of information.
 
-
+None
 
 ------------------------------------------------------------------------
 In fulfillment of the requirement from section 2.4.3 of the Academic
@@ -36,12 +38,20 @@ enter your name in the space below the following affirmation:
 This paper represents my own work in accordance with University
 regulations.
 
+The paper represents my own work in accordance with University 
+regulations. 
+
+Anish Kataria
 
 
 ------------------------------------------------------------------------
 What is your assessment of the assignment? Was it helpful? Was it fun?
 
-
+As an introduction to C, this assignment was fun! It helped 
+me familiarize myself with the different coding conventions, 
+styles, and techniques compared to Java/Python. I also learned
+a ton, in a very helpful way, about using Github and SSH with armlab.
+Overall, I would say this was a helful and engaging assignment.
 
 ------------------------------------------------------------------------
 (optional) What information can you provide about your submission that
