@@ -13,32 +13,29 @@ enum State {
 };
 
 enum State handleNormal(int c) {
-  enum State state;
-  state = NORMAL;
-  if (c == '/')
+  enum State state = NORMAL;
+  if (c == '/') {
     state = POTENTIAL_COMMENT;
-  else if (c == '\'') {
+  } else if (c == '\'') {
     putchar(c);
     state = CHAR_LIT;
   } else if (c == '"') {
     putchar(c);
     state = STRING_LIT;
-  } 
-  else if (c == '\n') { 
+  } else if (c == '\n') { 
     putchar(c);
     state = NORMAL;
-  }
-  else {
+  } else {
     putchar(c);
   }
   return state;
 }
 
-enum State handlePotentialComment(int c) {
-  enum State state;
-  state = POTENTIAL_COMMENT;
+enum State handlePotentialComment(int c, int *commentStartLine, int lineNum) {
+  enum State state = POTENTIAL_COMMENT;
   if (c == '*') {
     putchar(' ');
+    *commentStartLine = lineNum;  // Now setting comment start line here
     state = IN_COMMENT;
   } 
   else if (c == '/') {
@@ -63,51 +60,51 @@ enum State handlePotentialComment(int c) {
   return state;
 }
 
-enum State handleInComment(int c) {
-  enum State state;
-  state = IN_COMMENT;
-  if(c == '\n')
+enum State handleInComment(int c, int *lineNum) {
+  enum State state = IN_COMMENT;
+  if (c == '\n') {
     putchar('\n');
-  else if (c == '*')
+    (*lineNum)++;  // Count newlines inside comments
+  } else if (c == '*') {
     state = STAR_COMMENT;
+  }
   return state; 
 }
 
-enum State handleStarComment(int c) {
-  enum State state;
-  if (c == '/'){
+enum State handleStarComment(int c, int *lineNum) {
+  enum State state = STAR_COMMENT;
+  if (c == '/') {
     state = NORMAL;
-    return state;
-  }
-  else if (c == '*')
+  } else if (c == '*') {
     state = STAR_COMMENT;
-  else if (c == '\n'){
+  } else if (c == '\n') {
     putchar('\n');
+    (*lineNum)++;  // Count newlines in the comment
+    state = IN_COMMENT;
+  } else {
     state = IN_COMMENT;
   }
-  else 
-    state = IN_COMMENT;
   return state;
 }
 
 enum State handleStringLit(int c) {
-  enum State state;
-  state = STRING_LIT;
-  if (c == '"')
+  enum State state = STRING_LIT;
+  if (c == '"') {
     state = NORMAL;
-  else if (c == '\\')
+  } else if (c == '\\') {
     state = STRING_ESC;
+  }
   putchar(c);
   return state;
 }
 
 enum State handleCharLit(int c) {
-  enum State state;
-  state = CHAR_LIT;
-  if (c == '\'')
+  enum State state = CHAR_LIT;
+  if (c == '\'') {
     state = NORMAL;
-  else if (c == '\\')
+  } else if (c == '\\') {
     state = CHAR_ESC;
+  }
   putchar(c);
   return state;
 }
@@ -125,13 +122,14 @@ enum State handleCharEsc(int c) {
 int main() {
   enum State state;
   int c;
-  int lineNum = 1;
-  int commentStartLine = 0;
+  int lineNum = 1;          // Track the current line number
+  int commentStartLine = 0;  // Track where comments start
+
   state = NORMAL;
 
   while ((c = getchar()) != EOF) {
-    if(c == '\n'){
-      lineNum++;
+    if (c == '\n') {
+      lineNum++;  // Increment line number for each newline
     }
 
     switch (state) {
@@ -139,14 +137,13 @@ int main() {
         state = handleNormal(c);
         break;
       case POTENTIAL_COMMENT:
-        commentStartLine = lineNum;
-        state = handlePotentialComment(c);
+        state = handlePotentialComment(c, &commentStartLine, lineNum);
         break;
       case IN_COMMENT:
-        state = handleInComment(c);
+        state = handleInComment(c, &lineNum);
         break;
       case STAR_COMMENT:
-        state = handleStarComment(c);
+        state = handleStarComment(c, &lineNum);
         break;
       case STRING_LIT:
         state = handleStringLit(c);
@@ -163,13 +160,14 @@ int main() {
     }
   }
 
-  if(state == IN_COMMENT || state == STAR_COMMENT) {
+  if (state == IN_COMMENT || state == STAR_COMMENT) {
     fprintf(stderr, "Error: line %d: unterminated comment\n", commentStartLine);
     return EXIT_FAILURE;
   }
 
-  if(state == POTENTIAL_COMMENT){
+  if (state == POTENTIAL_COMMENT) {
     putchar('/');
   }
+
   return EXIT_SUCCESS;
 }
