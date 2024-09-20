@@ -1,191 +1,175 @@
 #include <stdio.h>
-#include <ctype.h>
 #include <stdlib.h>
 
-enum ProcessState {DEFAULT, IN_QUOTE, IN_SINGLE_CHAR, 
-SINGLE_CHAR_ESCAPED, QUOTE_ESCAPED, INSIDE_COMMENT, 
-POSSIBLE_COMMENT_BEGIN, POSSIBLE_COMMENT_END};
+enum State {
+  NORMAL,
+  POTENTIAL_COMMENT,
+  IN_COMMENT,
+  STAR_COMMENT,
+  STRING_LIT,
+  CHAR_LIT,
+  STRING_ESC,
+  CHAR_ESC
+};
 
-enum ProcessState handleDefaultState(int inputChar, int *currentLine) {
-    enum ProcessState process;
-    if (inputChar == '"') {
-        putchar(inputChar);
-        process = IN_QUOTE;
-    }
-    else if (inputChar == '\'') {
-        putchar(inputChar);
-        process = IN_SINGLE_CHAR;
-    } 
-    else if (inputChar == '/') {
-        process = POSSIBLE_COMMENT_BEGIN;
-    }
-    else  {
-        if (inputChar == '\n') {
-            (*currentLine)++;
-        } 
-        putchar(inputChar);
-        process = DEFAULT;     
-    }
-    return process;
+enum State handleNormal(int c) {
+  enum State state;
+  state = NORMAL;
+  if (c == '/')
+    state = POTENTIAL_COMMENT;
+  else if (c == '\'') {
+    putchar(c);
+    state = CHAR_LIT;
+  } else if (c == '"') {
+    putchar(c);
+    state = STRING_LIT;
+  } 
+  else if (c == '\n') { 
+    putchar(c);
+    state = NORMAL;
+  }
+  else {
+    putchar(c);
+  }
+  return state;
 }
 
-enum ProcessState handleQuoteState(int inputChar) {
-    enum ProcessState process;
-    if (inputChar == '\\') {
-        putchar(inputChar);
-        process = QUOTE_ESCAPED;
-    }
-    else if (inputChar == '"') {
-        putchar(inputChar);
-        process = DEFAULT;
-    } 
-    else {
-        putchar(inputChar);
-        process = IN_QUOTE;
-    }
-    return process;
+enum State handlePotentialComment(int c) {
+  enum State state;
+  state = POTENTIAL_COMMENT;
+  if (c == '*') {
+    putchar(' ');
+    state = IN_COMMENT;
+  } 
+  else if (c == '/') {
+    putchar('/');
+    state = POTENTIAL_COMMENT;
+  }
+  else if (c == '\''){
+    putchar('/');
+    putchar(c);
+    state = CHAR_LIT;
+  }
+  else if (c == '"'){
+    putchar('/');
+    putchar(c);
+    state = STRING_LIT;
+  }
+  else {
+    putchar('/');
+    putchar(c);
+    state = NORMAL;
+  }
+  return state;
 }
 
-enum ProcessState handleSingleCharState(int inputChar) {
-    enum ProcessState process;
-    if (inputChar == '\\') { 
-        putchar(inputChar);
-        process = SINGLE_CHAR_ESCAPED;
-    }
-    else if (inputChar == '\'') {
-        putchar(inputChar);
-        process = DEFAULT;
-    } 
-    else {
-        putchar(inputChar);
-        process = IN_SINGLE_CHAR;
-    }
-    return process;
+enum State handleInComment(int c) {
+  enum State state;
+  state = IN_COMMENT;
+  if(c == '\n')
+    putchar('\n');
+  else if (c == '*')
+    state = STAR_COMMENT;
+  return state; 
 }
 
-enum ProcessState handleQuoteEscapedState(int inputChar) {
-    enum ProcessState process;
-    putchar(inputChar);
-    process = IN_QUOTE;
-    return process; 
+enum State handleStarComment(int c) {
+  enum State state;
+  if (c == '/'){
+    state = NORMAL;
+    return state;
+  }
+  else if (c == '*')
+    state = STAR_COMMENT;
+  else if (c == '\n'){
+    putchar('\n');
+    state = IN_COMMENT;
+  }
+  else 
+    state = IN_COMMENT;
+  return state;
 }
 
-enum ProcessState handleSingleCharEscapedState(int inputChar) {
-    enum ProcessState process;
-    putchar(inputChar);
-    process = IN_SINGLE_CHAR;
-    return process; 
+enum State handleStringLit(int c) {
+  enum State state;
+  state = STRING_LIT;
+  if (c == '"')
+    state = NORMAL;
+  else if (c == '\\')
+    state = STRING_ESC;
+  putchar(c);
+  return state;
 }
 
-enum ProcessState handleCommentState(int inputChar) {
-    enum ProcessState process;
-    if (inputChar == '*') {
-        process = POSSIBLE_COMMENT_END; 
-    }
-    else if (inputChar == '\n') {
-        putchar(inputChar); 
-        process = INSIDE_COMMENT; 
-    }
-    else {
-        process = INSIDE_COMMENT;
-    }
-    return process;
+enum State handleCharLit(int c) {
+  enum State state;
+  state = CHAR_LIT;
+  if (c == '\'')
+    state = NORMAL;
+  else if (c == '\\')
+    state = CHAR_ESC;
+  putchar(c);
+  return state;
 }
 
-enum ProcessState handlePossibleCommentBegin(int inputChar, int *currentLine, int *errorLine) {
-    enum ProcessState process;
-    if (inputChar == '/') {
-        printf("/"); 
-        process = POSSIBLE_COMMENT_BEGIN;
-    }
-    else if (inputChar == '\'') {
-        printf("/%c", inputChar);
-        process = IN_SINGLE_CHAR;
-    }
-    else if (inputChar =='"') {
-        printf("/%c", inputChar); 
-        process = IN_QUOTE;
-    }
-    else if (inputChar == '*') {
-        printf(" ");
-        process = INSIDE_COMMENT;
-    } 
-    else {
-        printf("/%c", inputChar);
-        process = DEFAULT;
-    }
-    return process;
+enum State handleStringEsc(int c) {
+  putchar(c);
+  return STRING_LIT;
 }
 
-enum ProcessState handlePossibleCommentEnd(int inputChar) {
-    enum ProcessState process;
-    if (inputChar == '*') { 
-        process = POSSIBLE_COMMENT_END;
-    }
-    else if (inputChar == '\n') {     
-        putchar(inputChar);
-        process = INSIDE_COMMENT;
-    }
-    else if (inputChar == '/') { 
-        process = DEFAULT;
-    }
-    else {
-        process = INSIDE_COMMENT;
-    }
-    return process;
+enum State handleCharEsc(int c) {
+  putchar(c);
+  return CHAR_LIT;
 }
 
-int main(void) {
-    enum ProcessState process = DEFAULT;
-    int currentLine = 1;
-    int errorLine = currentLine;
-    int inputChar;
+int main() {
+  enum State state;
+  int c;
+  int lineNum = 1;
+  int commentStartLine = 0;
+  state = NORMAL;
 
-    while ((inputChar = getchar()) != EOF) { 
-        switch (process) {
-            case DEFAULT: 
-                process = handleDefaultState(inputChar, &currentLine);
-                break;
-            case IN_QUOTE:
-                process = handleQuoteState(inputChar);
-                break;
-            case IN_SINGLE_CHAR: 
-                process = handleSingleCharState(inputChar);
-                break;
-            case SINGLE_CHAR_ESCAPED: 
-                process = handleSingleCharEscapedState(inputChar);
-                break;
-            case QUOTE_ESCAPED: 
-                process = handleQuoteEscapedState(inputChar);
-                break;
-            case INSIDE_COMMENT: 
-                process = handleCommentState(inputChar);
-                break;
-            case POSSIBLE_COMMENT_BEGIN: 
-                process = handlePossibleCommentBegin(inputChar, &currentLine, &errorLine); 
-                break;
-            case POSSIBLE_COMMENT_END: 
-                process = handlePossibleCommentEnd(inputChar);
-                break;
-        }
-
-        if (inputChar == '\n' && process != POSSIBLE_COMMENT_BEGIN && process != INSIDE_COMMENT) {
-            errorLine = currentLine;
-        }
-        
-        if (inputChar == '\n' && process != DEFAULT) {
-            currentLine = currentLine + 1; 
-        } 
+  while ((c = getchar()) != EOF) {
+    if(c == '\n'){
+      lineNum++;
     }
 
-    if (process == POSSIBLE_COMMENT_END || process == INSIDE_COMMENT) {
-        fprintf(stderr, "Error: line %d: unterminated comment\n", errorLine);
-        return EXIT_FAILURE;
+    switch (state) {
+      case NORMAL:
+        state = handleNormal(c);
+        break;
+      case POTENTIAL_COMMENT:
+        commentStartLine = lineNum;
+        state = handlePotentialComment(c);
+        break;
+      case IN_COMMENT:
+        state = handleInComment(c);
+        break;
+      case STAR_COMMENT:
+        state = handleStarComment(c);
+        break;
+      case STRING_LIT:
+        state = handleStringLit(c);
+        break;
+      case CHAR_LIT:
+        state = handleCharLit(c);
+        break;
+      case STRING_ESC:
+        state = handleStringEsc(c);
+        break;
+      case CHAR_ESC:
+        state = handleCharEsc(c);
+        break;
     }
-    else {
-        if (process == POSSIBLE_COMMENT_BEGIN) {
-            printf("/");
-        }
-        return EXIT_SUCCESS;
-    }
+  }
+
+  if(state == IN_COMMENT || state == STAR_COMMENT) {
+    fprintf(stderr, "Error: line %d: unterminated comment\n", commentStartLine);
+    return EXIT_FAILURE;
+  }
+
+  if(state == POTENTIAL_COMMENT){
+    putchar('/');
+  }
+  return EXIT_SUCCESS;
 }

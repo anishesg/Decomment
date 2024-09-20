@@ -1,0 +1,52 @@
+========================================================================
+Textual DFA, COS217, A1
+Author: Anish Kataria
+
+NORMAL, POTENTIAL_COMMENT, IN_COMMENT, CHAR_LIT, STRING_LIT, STAR_COMMENT, STRING_ESC, CHAR_ESC
+========================================================================
+
+
+
+NORMAL (accept) <- start state
+    ": IN_STRING
+    ': IN_CHAR_LIT
+    /: POTENTIAL_COMMENT
+    \n: START
+    other: NORMAL
+
+POTENTIAL_COMMENT (accept)
+    /: POTENTIAL_COMMENT
+    ": IN_STRING
+    ': IN_CHAR_LIT
+    *: IN_COMMENT
+    other: NORMAL
+
+IN_COMMENT (reject)
+    \n: IN_COMMENT
+    *: STAR_COMMENT
+
+STAR_COMMENT (reject)
+    /: START
+    *: STAR_COMMENT
+    \n: IN_COMMENT
+    other: IN_COMMENT
+
+
+STRING_LIT (accept)
+   ": NORMAL
+    \: STRING_ESC
+    other: STRING_LIT
+
+
+STRING_ESC (accept)
+    other: STRING_LIT
+
+CHAR_LIT:
+    \: CHAR_ESC
+    ': NORMAL
+    other: CHAR_LIT
+
+CHAR_ESC (accept)
+    other: CHAR_LIT
+
+
