@@ -1,11 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Macros to handle common actions */
-#define HANDLE_NEWLINE(c, lineNum) { putchar(c); lineNum++; }
-#define HANDLE_PUTCHAR(x) { putchar(x); }
-
-/* State definitions remain unchanged */
 enum State {
   NORMAL,
   POTENTIAL_COMMENT,
@@ -17,142 +12,153 @@ enum State {
   CHAR_ESC
 };
 
-/* Updated function signatures to pass lineNum as a parameter */
-enum State handleNormal(int c, int* lineNum) {
+enum State handleNormal(int c) {
+  enum State state;
+  state = NORMAL;
   switch (c) {
     case '/':
-      return POTENTIAL_COMMENT;
+      state = POTENTIAL_COMMENT;
+      break;
     case '"':
-      HANDLE_PUTCHAR(c);
-      return STRING_LIT;
+      putchar(c);
+      state = STRING_LIT;
+      break;
     case '\'':
-      HANDLE_PUTCHAR(c);
-      return CHAR_LIT;
+      putchar(c);
+      state = CHAR_LIT;
+      break;
     case '\n':
-      HANDLE_NEWLINE(c, *lineNum);
-      return NORMAL;
+      putchar(c);
+      state = NORMAL;
+      break;
     default:
-      HANDLE_PUTCHAR(c);
-      return NORMAL;
+      putchar(c);
+      break;
   }
+  return state;
 }
 
 enum State handlePotentialComment(int c) {
+  enum State state;
+  state = POTENTIAL_COMMENT;
   switch (c) {
     case '*':
-      HANDLE_PUTCHAR(' ');
-      return IN_COMMENT;
+      putchar(' ');
+      state = IN_COMMENT;
+      break;
     case '/':
-      HANDLE_PUTCHAR('/');
-      return POTENTIAL_COMMENT;
+      putchar('/');
+      state = POTENTIAL_COMMENT;
+      break;
     case '\'':
-      HANDLE_PUTCHAR('/');
-      HANDLE_PUTCHAR(c);
-      return CHAR_LIT;
+      putchar('/');
+      putchar(c);
+      state = CHAR_LIT;
+      break;
     case '"':
-      HANDLE_PUTCHAR('/');
-      HANDLE_PUTCHAR(c);
-      return STRING_LIT;
+      putchar('/');
+      putchar(c);
+      state = STRING_LIT;
+      break;
     default:
-      HANDLE_PUTCHAR('/');
-      HANDLE_PUTCHAR(c);
-      return NORMAL;
+      putchar('/');
+      putchar(c);
+      state = NORMAL;
+      break;
   }
+  return state;
 }
 
-enum State handleInComment(int c, int* lineNum) {
-  switch (c) {
-    case '\n':
-      HANDLE_NEWLINE(c, *lineNum);
-      return IN_COMMENT;
-    case '*':
-      return STAR_COMMENT;
-    default:
-      return IN_COMMENT;
+enum State handleInComment(int c) {
+  enum State state;
+  state = IN_COMMENT;
+  if (c == '\n') {
+    putchar('\n');
+  } else if (c == '*') {
+    state = STAR_COMMENT;
   }
+  return state; 
 }
 
-enum State handleStarComment(int c, int* lineNum) {
+enum State handleStarComment(int c) {
+  enum State state;
   switch (c) {
     case '/':
-      return NORMAL;
+      state = NORMAL;
+      break;
     case '*':
-      return STAR_COMMENT;
+      state = STAR_COMMENT;
+      break;
     case '\n':
-      HANDLE_NEWLINE(c, *lineNum);
-      return IN_COMMENT;
+      putchar('\n');
+      state = IN_COMMENT;
+      break;
     default:
-      return IN_COMMENT;
+      state = IN_COMMENT;
+      break;
   }
+  return state;
 }
 
 enum State handleStringLit(int c) {
-  switch (c) {
-    case '"':
-      return NORMAL;
-    case '\\':
-      HANDLE_PUTCHAR(c);
-      return STRING_ESC;
-    default:
-      HANDLE_PUTCHAR(c);
-      return STRING_LIT;
+  enum State state;
+  state = STRING_LIT;
+  if (c == '"') {
+    state = NORMAL;
+  } else if (c == '\\') {
+    state = STRING_ESC;
   }
+  putchar(c);
+  return state;
 }
 
 enum State handleCharLit(int c) {
-  switch (c) {
-    case '\'':
-      return NORMAL;
-    case '\\':
-      HANDLE_PUTCHAR(c);
-      return CHAR_ESC;
-    default:
-      HANDLE_PUTCHAR(c);
-      return CHAR_LIT;
+  enum State state;
+  state = CHAR_LIT;
+  if (c == '\'') {
+    state = NORMAL;
+  } else if (c == '\\') {
+    state = CHAR_ESC;
   }
+  putchar(c);
+  return state;
 }
 
 enum State handleStringEsc(int c) {
-  HANDLE_PUTCHAR(c);
+  putchar(c);
   return STRING_LIT;
 }
 
 enum State handleCharEsc(int c) {
-  HANDLE_PUTCHAR(c);
+  putchar(c);
   return CHAR_LIT;
 }
 
 int main() {
-  enum State state = NORMAL;
+  enum State state;
   int c;
   int lineNum = 1;
   int commentStartLine = 0;
+  state = NORMAL;
 
   while ((c = getchar()) != EOF) {
     if (c == '\n') {
       lineNum++;
     }
 
-    /* Reordered case statements for variability */
     switch (state) {
-      case STRING_ESC:
-        state = handleStringEsc(c);
-        break;
-      case CHAR_ESC:
-        state = handleCharEsc(c);
-        break;
       case NORMAL:
-        state = handleNormal(c, &lineNum);
+        state = handleNormal(c);
         break;
       case POTENTIAL_COMMENT:
         commentStartLine = lineNum;
         state = handlePotentialComment(c);
         break;
       case IN_COMMENT:
-        state = handleInComment(c, &lineNum);
+        state = handleInComment(c);
         break;
       case STAR_COMMENT:
-        state = handleStarComment(c, &lineNum);
+        state = handleStarComment(c);
         break;
       case STRING_LIT:
         state = handleStringLit(c);
@@ -160,17 +166,22 @@ int main() {
       case CHAR_LIT:
         state = handleCharLit(c);
         break;
+      case STRING_ESC:
+        state = handleStringEsc(c);
+        break;
+      case CHAR_ESC:
+        state = handleCharEsc(c);
+        break;
     }
   }
 
-  /* Keeping exit conditions intact */
   if (state == IN_COMMENT || state == STAR_COMMENT) {
     fprintf(stderr, "Error: line %d: unterminated comment\n", commentStartLine);
     return EXIT_FAILURE;
   }
 
   if (state == POTENTIAL_COMMENT) {
-    HANDLE_PUTCHAR('/');
+    putchar('/');
   }
 
   return EXIT_SUCCESS;
