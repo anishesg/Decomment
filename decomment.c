@@ -12,164 +12,154 @@ enum State {
   CHAR_ESC
 };
 
-enum State handleNormal(int c) {
-  enum State state;
-  state = NORMAL;
-  if (c == '/')
-    state = POTENTIAL_COMMENT;
-  else if (c == '\'') {
+enum State processStateNormal(int c) {
+  enum State currentState = NORMAL;
+
+  if (c == '/') {
+    currentState = POTENTIAL_COMMENT;
+  } else if (c == '\'') {
     putchar(c);
-    state = CHAR_LIT;
+    currentState = CHAR_LIT;
   } else if (c == '"') {
     putchar(c);
-    state = STRING_LIT;
-  } 
-  else if (c == '\n') { 
+    currentState = STRING_LIT;
+  } else if (c == '\n') {
     putchar(c);
-    state = NORMAL;
-  }
-  else {
+  } else {
     putchar(c);
   }
-  return state;
+  
+  return currentState;
 }
 
-enum State handlePotentialComment(int c) {
-  enum State state;
-  state = POTENTIAL_COMMENT;
+enum State processStatePotentialComment(int c, int* startLine, int currLine) {
+  enum State currentState = POTENTIAL_COMMENT;
+  
   if (c == '*') {
     putchar(' ');
-    state = IN_COMMENT;
-  } 
-  else if (c == '/') {
-    putchar('/');
-    state = POTENTIAL_COMMENT;
-  }
-  else if (c == '\''){
+    currentState = IN_COMMENT;
+    *startLine = currLine;
+  } else {
     putchar('/');
     putchar(c);
-    state = CHAR_LIT;
+    currentState = NORMAL;
   }
-  else if (c == '"'){
-    putchar('/');
+  
+  return currentState;
+}
+
+enum State processStateInComment(int c) {
+  enum State currentState = IN_COMMENT;
+
+  if (c == '*') {
+    currentState = STAR_COMMENT;
+  } else if (c == '\n') {
     putchar(c);
-    state = STRING_LIT;
   }
-  else {
-    putchar('/');
-    putchar(c);
-    state = NORMAL;
-  }
-  return state;
+
+  return currentState;
 }
 
-enum State handleInComment(int c) {
-  enum State state;
-  state = IN_COMMENT;
-  if(c == '\n')
-    putchar('\n');
-  else if (c == '*')
-    state = STAR_COMMENT;
-  return state; 
+enum State processStateStarComment(int c) {
+  enum State currentState = STAR_COMMENT;
+
+  if (c == '/') {
+    currentState = NORMAL;
+  } else if (c == '*') {
+    currentState = STAR_COMMENT;
+  } else {
+    currentState = IN_COMMENT;
+    if (c == '\n') {
+      putchar(c);
+    }
+  }
+
+  return currentState;
 }
 
-enum State handleStarComment(int c) {
-  enum State state;
-  if (c == '/'){
-    state = NORMAL;
-    return state;
-  }
-  else if (c == '*')
-    state = STAR_COMMENT;
-  else if (c == '\n'){
-    putchar('\n');
-    state = IN_COMMENT;
-  }
-  else 
-    state = IN_COMMENT;
-  return state;
-}
+enum State processStateStringLit(int c) {
+  enum State currentState = STRING_LIT;
 
-enum State handleStringLit(int c) {
-  enum State state;
-  state = STRING_LIT;
-  if (c == '"')
-    state = NORMAL;
-  else if (c == '\\')
-    state = STRING_ESC;
+  if (c == '"') {
+    currentState = NORMAL;
+  } else if (c == '\\') {
+    currentState = STRING_ESC;
+  }
+
   putchar(c);
-  return state;
+  return currentState;
 }
 
-enum State handleCharLit(int c) {
-  enum State state;
-  state = CHAR_LIT;
-  if (c == '\'')
-    state = NORMAL;
-  else if (c == '\\')
-    state = CHAR_ESC;
+enum State processStateCharLit(int c) {
+  enum State currentState = CHAR_LIT;
+
+  if (c == '\'') {
+    currentState = NORMAL;
+  } else if (c == '\\') {
+    currentState = CHAR_ESC;
+  }
+
   putchar(c);
-  return state;
+  return currentState;
 }
 
-enum State handleStringEsc(int c) {
+enum State processStateStringEsc(int c) {
   putchar(c);
   return STRING_LIT;
 }
 
-enum State handleCharEsc(int c) {
+enum State processStateCharEsc(int c) {
   putchar(c);
   return CHAR_LIT;
 }
 
 int main() {
-  enum State state;
+  enum State currentState = NORMAL;
   int c;
-  int lineNum = 1;
-  int commentStartLine = 0;
-  state = NORMAL;
+  int lineNumber = 1;
+  int commentLine = 0;
 
   while ((c = getchar()) != EOF) {
-    if(c == '\n'){
-      lineNum++;
+    if (c == '\n') {
+      lineNumber++;
     }
 
-    switch (state) {
+    switch (currentState) {
       case NORMAL:
-        state = handleNormal(c);
+        currentState = processStateNormal(c);
         break;
       case POTENTIAL_COMMENT:
-        commentStartLine = lineNum;
-        state = handlePotentialComment(c);
+        currentState = processStatePotentialComment(c, &commentLine, lineNumber);
         break;
       case IN_COMMENT:
-        state = handleInComment(c);
+        currentState = processStateInComment(c);
         break;
       case STAR_COMMENT:
-        state = handleStarComment(c);
+        currentState = processStateStarComment(c);
         break;
       case STRING_LIT:
-        state = handleStringLit(c);
+        currentState = processStateStringLit(c);
         break;
       case CHAR_LIT:
-        state = handleCharLit(c);
+        currentState = processStateCharLit(c);
         break;
       case STRING_ESC:
-        state = handleStringEsc(c);
+        currentState = processStateStringEsc(c);
         break;
       case CHAR_ESC:
-        state = handleCharEsc(c);
+        currentState = processStateCharEsc(c);
         break;
     }
   }
 
-  if(state == IN_COMMENT || state == STAR_COMMENT) {
-    fprintf(stderr, "Error: line %d: unterminated comment\n", commentStartLine);
+  if (currentState == IN_COMMENT || currentState == STAR_COMMENT) {
+    fprintf(stderr, "Error: line %d: unterminated comment\n", commentLine);
     return EXIT_FAILURE;
   }
 
-  if(state == POTENTIAL_COMMENT){
+  if (currentState == POTENTIAL_COMMENT) {
     putchar('/');
   }
+
   return EXIT_SUCCESS;
 }
