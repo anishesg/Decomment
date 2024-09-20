@@ -35,7 +35,7 @@ enum State handlePotentialComment(int c, int *commentStartLine, int lineNum) {
   enum State state = POTENTIAL_COMMENT;
   if (c == '*') {
     putchar(' ');
-    *commentStartLine = lineNum;  // Now setting comment start line here
+    *commentStartLine = lineNum;
     state = IN_COMMENT;
   } 
   else if (c == '/') {
@@ -64,7 +64,7 @@ enum State handleInComment(int c, int *lineNum) {
   enum State state = IN_COMMENT;
   if (c == '\n') {
     putchar('\n');
-    (*lineNum)++;  // Count newlines inside comments
+    (*lineNum)++;
   } else if (c == '*') {
     state = STAR_COMMENT;
   }
@@ -79,7 +79,7 @@ enum State handleStarComment(int c, int *lineNum) {
     state = STAR_COMMENT;
   } else if (c == '\n') {
     putchar('\n');
-    (*lineNum)++;  // Count newlines in the comment
+    (*lineNum)++;
     state = IN_COMMENT;
   } else {
     state = IN_COMMENT;
@@ -122,14 +122,14 @@ enum State handleCharEsc(int c) {
 int main() {
   enum State state;
   int c;
-  int lineNum = 1;          // Track the current line number
-  int commentStartLine = 0;  // Track where comments start
+  int lineNum = 1;
+  int commentStartLine = 0;
 
   state = NORMAL;
 
   while ((c = getchar()) != EOF) {
     if (c == '\n') {
-      lineNum++;  // Increment line number for each newline
+      lineNum++;
     }
 
     switch (state) {
