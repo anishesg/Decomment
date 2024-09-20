@@ -1,13 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Struct to store the current state, line number, and comment start line */
-struct DecommentState {
-  enum State currentState;
-  int lineNum;
-  int commentStartLine;
-};
-
 /* Enum to define all possible states in the de-commenting process */
 enum State {
   NORMAL,              /* Default state: no comment or special character handling */
@@ -26,33 +19,33 @@ enum State {
  * and character literals ('\'').
  * Parameters:
  *   - c: the current character being processed.
- *   - state: a pointer to the DecommentState struct storing the current state and line information.
  * Returns:
  *   The next state after processing the character.
  */
-enum State handleNormal(int c, struct DecommentState *ds) {
+enum State handleNormal(int c) {
+  enum State state;
+  state = NORMAL;
   switch (c) {
     case '/':
-      ds->currentState = POTENTIAL_COMMENT;
+      state = POTENTIAL_COMMENT;
       break;
     case '"':
       putchar(c);
-      ds->currentState = STRING_LIT;
+      state = STRING_LIT;
       break;
     case '\'':
       putchar(c);
-      ds->currentState = CHAR_LIT;
+      state = CHAR_LIT;
       break;
     case '\n':
       putchar(c);
-      ds->currentState = NORMAL;
-      ds->lineNum++;
+      state = NORMAL;
       break;
     default:
       putchar(c);
       break;
   }
-  return ds->currentState;
+  return state;
 }
 
 /* 
@@ -60,57 +53,52 @@ enum State handleNormal(int c, struct DecommentState *ds) {
  * Looks for the end of the comment ('*') or newlines to maintain line numbers.
  * Parameters:
  *   - c: the current character being processed.
- *   - state: a pointer to the DecommentState struct storing the current state and line information.
  * Returns:
  *   The next state after processing the character (IN_COMMENT or STAR_COMMENT).
  */
-enum State handleInComment(int c, struct DecommentState *ds) {
+enum State handleInComment(int c) {
+  enum State state;
+  state = IN_COMMENT;
   if (c == '\n') {
     putchar('\n');
-    ds->lineNum++;
   } else if (c == '*') {
-    ds->currentState = STAR_COMMENT;
+    state = STAR_COMMENT;
   }
-  return ds->currentState;
+  return state; 
 }
 
 /* 
  * handlePotentialComment: Processes characters after encountering a '/'.
- * Determines if the character sequence is a comment or something else.
- * Parameters:
- *   - c: the current character being processed.
- *   - state: a pointer to the DecommentState struct storing the current state and line information.
- * Returns:
- *   The next state after processing the character.
- */
-enum State handlePotentialComment(int c, struct DecommentState *ds) {
+ * Determines if the character sequence is a comment */ 
+enum State handlePotentialComment(int c) {
+  enum State state;
+  state = POTENTIAL_COMMENT;
   switch (c) {
     case '*':
       putchar(' ');
-      ds->currentState = IN_COMMENT;
-      ds->commentStartLine = ds->lineNum;
+      state = IN_COMMENT;
       break;
     case '/':
       putchar('/');
-      ds->currentState = POTENTIAL_COMMENT;
+      state = POTENTIAL_COMMENT;
       break;
     case '\'':
       putchar('/');
       putchar(c);
-      ds->currentState = CHAR_LIT;
+      state = CHAR_LIT;
       break;
     case '"':
       putchar('/');
       putchar(c);
-      ds->currentState = STRING_LIT;
+      state = STRING_LIT;
       break;
     default:
       putchar('/');
       putchar(c);
-      ds->currentState = NORMAL;
+      state = NORMAL;
       break;
   }
-  return ds->currentState;
+  return state;
 }
 
 /* 
@@ -118,18 +106,19 @@ enum State handlePotentialComment(int c, struct DecommentState *ds) {
  * Detects the end of the string or escape sequences.
  * Parameters:
  *   - c: the current character being processed.
- *   - state: a pointer to the DecommentState struct storing the current state and line information.
  * Returns:
  *   The next state after processing the character (STRING_LIT, STRING_ESC, or NORMAL).
  */
-enum State handleStringLit(int c, struct DecommentState *ds) {
+enum State handleStringLit(int c) {
+  enum State state;
+  state = STRING_LIT;
   if (c == '"') {
-    ds->currentState = NORMAL;
+    state = NORMAL;
   } else if (c == '\\') {
-    ds->currentState = STRING_ESC;
+    state = STRING_ESC;
   }
   putchar(c);
-  return ds->currentState;
+  return state;
 }
 
 /* 
@@ -137,28 +126,27 @@ enum State handleStringLit(int c, struct DecommentState *ds) {
  * Determines if the comment ends ('/'), continues ('*'), or has a newline.
  * Parameters:
  *   - c: the current character being processed.
- *   - state: a pointer to the DecommentState struct storing the current state and line information.
  * Returns:
  *   The next state after processing the character (STAR_COMMENT, IN_COMMENT, or NORMAL).
  */
-enum State handleStarComment(int c, struct DecommentState *ds) {
+enum State handleStarComment(int c) {
+  enum State state;
   switch (c) {
     case '/':
-      ds->currentState = NORMAL;
+      state = NORMAL;
       break;
     case '*':
-      ds->currentState = STAR_COMMENT;
+      state = STAR_COMMENT;
       break;
     case '\n':
       putchar('\n');
-      ds->lineNum++;
-      ds->currentState = IN_COMMENT;
+      state = IN_COMMENT;
       break;
     default:
-      ds->currentState = IN_COMMENT;
+      state = IN_COMMENT;
       break;
   }
-  return ds->currentState;
+  return state;
 }
 
 /* 
@@ -166,18 +154,19 @@ enum State handleStarComment(int c, struct DecommentState *ds) {
  * Detects the end of the character literal or escape sequences.
  * Parameters:
  *   - c: the current character being processed.
- *   - state: a pointer to the DecommentState struct storing the current state and line information.
  * Returns:
  *   The next state after processing the character (CHAR_LIT, CHAR_ESC, or NORMAL).
  */
-enum State handleCharLit(int c, struct DecommentState *ds) {
+enum State handleCharLit(int c) {
+  enum State state;
+  state = CHAR_LIT;
   if (c == '\'') {
-    ds->currentState = NORMAL;
+    state = NORMAL;
   } else if (c == '\\') {
-    ds->currentState = CHAR_ESC;
+    state = CHAR_ESC;
   }
   putchar(c);
-  return ds->currentState;
+  return state;
 }
 
 /* 
@@ -185,14 +174,12 @@ enum State handleCharLit(int c, struct DecommentState *ds) {
  * Puts the escaped character and returns to STRING_LIT state.
  * Parameters:
  *   - c: the current character being processed.
- *   - state: a pointer to the DecommentState struct storing the current state and line information.
  * Returns:
  *   STRING_LIT after processing the escape character.
  */
-enum State handleStringEsc(int c, struct DecommentState *ds) {
+enum State handleStringEsc(int c) {
   putchar(c);
-  ds->currentState = STRING_LIT;
-  return ds->currentState;
+  return STRING_LIT;
 }
 
 /* 
@@ -200,14 +187,12 @@ enum State handleStringEsc(int c, struct DecommentState *ds) {
  * Puts the escaped character and returns to CHAR_LIT state.
  * Parameters:
  *   - c: the current character being processed.
- *   - state: a pointer to the DecommentState struct storing the current state and line information.
  * Returns:
  *   CHAR_LIT after processing the escape character.
  */
-enum State handleCharEsc(int c, struct DecommentState *ds) {
+enum State handleCharEsc(int c) {
   putchar(c);
-  ds->currentState = CHAR_LIT;
-  return ds->currentState;
+  return CHAR_LIT;
 }
 
 /* 
@@ -217,56 +202,56 @@ enum State handleCharEsc(int c, struct DecommentState *ds) {
  * Returns EXIT_SUCCESS if no unterminated comments are found, otherwise EXIT_FAILURE.
  */
 int main() {
-  struct DecommentState ds;
-  ds.currentState = NORMAL;
-  ds.lineNum = 1;
-  ds.commentStartLine = 0;
-
+  enum State state;
   int c;
+  int lineNum = 1;           /* Current line number in the input */
+  int commentStartLine = 0;   /* Line number where a comment starts */
+  state = NORMAL;
 
   /* Main loop to read characters until EOF */
   while ((c = getchar()) != EOF) {
     if (c == '\n') {
-      ds.lineNum++;
+      lineNum++;
     }
 
     /* Switch statement handles state transitions */
-    switch (ds.currentState) {
+    switch (state) {
       case NORMAL:
-        ds.currentState = handleNormal(c, &ds);
+        state = handleNormal(c);
         break;
       case POTENTIAL_COMMENT:
-        ds.currentState = handlePotentialComment(c, &ds);
+        commentStartLine = lineNum;
+        state = handlePotentialComment(c);
         break;
       case IN_COMMENT:
-        ds.currentState = handleInComment(c, &ds);
+        state = handleInComment(c);
         break;
       case STAR_COMMENT:
-        ds.currentState = handleStarComment(c, &ds);
+        state = handleStarComment(c);
         break;
       case STRING_LIT:
-        ds.currentState = handleStringLit(c, &ds);
+        state = handleStringLit(c);
         break;
       case CHAR_LIT:
-        ds.currentState = handleCharLit(c, &ds);
+        state = handleCharLit(c);
         break;
       case STRING_ESC:
-        ds.currentState = handleStringEsc(c, &ds);
+        state = handleStringEsc(c);
         break;
       case CHAR_ESC:
-        ds.currentState = handleCharEsc(c, &ds);
+        state = handleCharEsc(c);
         break;
     }
   }
 
   /* Handle unterminated comment error */
-  if (ds.currentState == IN_COMMENT || ds.currentState == STAR_COMMENT) {
-    fprintf(stderr, "Error: line %d: unterminated comment\n", ds.commentStartLine);
+  if (state == IN_COMMENT || state == STAR_COMMENT) {
+    fprintf(stderr, "Error: line %d: unterminated comment\n", commentStartLine);
     return EXIT_FAILURE;
   }
 
   /* Handle incomplete potential comment (single '/') */
-  if (ds.currentState == POTENTIAL_COMMENT) {
+  if (state == POTENTIAL_COMMENT) {
     putchar('/');
   }
 
