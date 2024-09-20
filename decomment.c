@@ -1,188 +1,164 @@
 #include <stdio.h>
-#include <stdlib.h>
 
-enum State {
-  NORMAL,
-  POTENTIAL_COMMENT,
-  IN_COMMENT,
-  STAR_COMMENT,
-  STRING_LIT,
-  CHAR_LIT,
-  STRING_ESC,
-  CHAR_ESC
-};
+/* define constants representing each of 8 states in the DFA */
+enum State {NORMAL, AFTER_SLASH, IN_COMMENT, AFTER_STAR, 
+            IN_STRING, IN_CHAR, BACKSLASH_STRING, BACKSLASH_CHAR};
 
-enum State handleNormal(int c) {
-  enum State state;
-  state = NORMAL;
-  switch (c) {
-    case '/':
-      state = POTENTIAL_COMMENT;
-      break;
-    case '"':
-      putchar(c);
-      state = STRING_LIT;
-      break;
-    case '\'':
-      putchar(c);
-      state = CHAR_LIT;
-      break;
-    case '\n':
-      putchar(c);
-      state = NORMAL;
-      break;
-    default:
-      putchar(c);
-      break;
-  }
-  return state;
-}
+/* declare state handling functions to be used in main */
+enum State handleNormal(int c, enum State currentState);
+enum State handleAfterSlash(int c, enum State currentState);
+enum State handleInComment(int c, enum State currentState);
+enum State handleAfterStar(int c, enum State currentState);
+enum State handleInString(int c, enum State currentState);
+enum State handleBackslashString(int c, enum State currentState);
+enum State handleInChar(int c, enum State currentState);
+enum State handleBackslashChar(int c, enum State currentState);
 
-enum State handlePotentialComment(int c) {
-  enum State state;
-  state = POTENTIAL_COMMENT;
-  switch (c) {
-    case '*':
-      putchar(' ');
-      state = IN_COMMENT;
-      break;
-    case '/':
-      putchar('/');
-      state = POTENTIAL_COMMENT;
-      break;
-    case '\'':
-      putchar('/');
-      putchar(c);
-      state = CHAR_LIT;
-      break;
-    case '"':
-      putchar('/');
-      putchar(c);
-      state = STRING_LIT;
-      break;
-    default:
-      putchar('/');
-      putchar(c);
-      state = NORMAL;
-      break;
-  }
-  return state;
-}
+/* main function called during execution */
+int main(void) {
+    /* tracks current number of lines read */
+    int lineCount = 1;
+    /* tracks last line at which a comment began */
+    int errorLine = 1;
+    /* current character in file */
+    int c;
+    /* current state of DFA */
+    enum State state = NORMAL;
 
-enum State handleInComment(int c) {
-  enum State state;
-  state = IN_COMMENT;
-  if (c == '\n') {
-    putchar('\n');
-  } else if (c == '*') {
-    state = STAR_COMMENT;
-  }
-  return state; 
-}
-
-enum State handleStarComment(int c) {
-  enum State state;
-  switch (c) {
-    case '/':
-      state = NORMAL;
-      break;
-    case '*':
-      state = STAR_COMMENT;
-      break;
-    case '\n':
-      putchar('\n');
-      state = IN_COMMENT;
-      break;
-    default:
-      state = IN_COMMENT;
-      break;
-  }
-  return state;
-}
-
-enum State handleStringLit(int c) {
-  enum State state;
-  state = STRING_LIT;
-  if (c == '"') {
-    state = NORMAL;
-  } else if (c == '\\') {
-    state = STRING_ESC;
-  }
-  putchar(c);
-  return state;
-}
-
-enum State handleCharLit(int c) {
-  enum State state;
-  state = CHAR_LIT;
-  if (c == '\'') {
-    state = NORMAL;
-  } else if (c == '\\') {
-    state = CHAR_ESC;
-  }
-  putchar(c);
-  return state;
-}
-
-enum State handleStringEsc(int c) {
-  putchar(c);
-  return STRING_LIT;
-}
-
-enum State handleCharEsc(int c) {
-  putchar(c);
-  return CHAR_LIT;
-}
-
-int main() {
-  enum State state;
-  int c;
-  int lineNum = 1;
-  int commentStartLine = 0;
-  state = NORMAL;
-
-  while ((c = getchar()) != EOF) {
-    if (c == '\n') {
-      lineNum++;
+    /* reads characters until end of file */
+    while ((c=getchar())!=EOF) {
+        /* increment line count at every newline character */
+        if (c=='\n') {
+            lineCount += 1;
+        }
+        /* only update line of last comment when not in comment */
+        if (state != IN_COMMENT && state != AFTER_STAR) {
+            errorLine = lineCount;
+        }
+        switch(state) {
+            case NORMAL:
+                state = handleNormal(c, state);
+                break;
+            case AFTER_SLASH:
+                state = handleAfterSlash(c, state);
+                break;
+            case IN_COMMENT:
+                state = handleInComment(c, state);
+                break;
+            case AFTER_STAR:
+                state = handleAfterStar(c, state);
+                break;
+            case IN_STRING:
+                state = handleInString(c, state);
+                break;
+            case BACKSLASH_STRING:
+                state = handleBackslashString(c, state);
+                break;
+            case IN_CHAR:
+                state = handleInChar(c, state);
+                break;
+            case BACKSLASH_CHAR:
+                state = handleBackslashChar(c, state);
+                break;
+        }
     }
-
-    switch (state) {
-      case NORMAL:
-        state = handleNormal(c);
-        break;
-      case POTENTIAL_COMMENT:
-        commentStartLine = lineNum;
-        state = handlePotentialComment(c);
-        break;
-      case IN_COMMENT:
-        state = handleInComment(c);
-        break;
-      case STAR_COMMENT:
-        state = handleStarComment(c);
-        break;
-      case STRING_LIT:
-        state = handleStringLit(c);
-        break;
-      case CHAR_LIT:
-        state = handleCharLit(c);
-        break;
-      case STRING_ESC:
-        state = handleStringEsc(c);
-        break;
-      case CHAR_ESC:
-        state = handleCharEsc(c);
-        break;
+    /* edge case: if last character of file is a slash */
+    if (state == AFTER_SLASH) {
+        putchar('/');
     }
-  }
+    /* rejection states - file has ended while inside comment */
+    if (state == IN_COMMENT || state == AFTER_STAR) {
+        fprintf(stderr, "Error: line %i: unterminated comment\n", errorLine);
+        return 1;
+    } else {
+        return 0;
+    }
+}
 
-  if (state == IN_COMMENT || state == STAR_COMMENT) {
-    fprintf(stderr, "Error: line %d: unterminated comment\n", commentStartLine);
-    return EXIT_FAILURE;
-  }
+/* implement the NORMAL state of the DFA */
+enum State handleNormal(int c, enum State currentState) {
+    if (c == '/') {
+        return AFTER_SLASH;
+    } else if (c == '"') {
+        putchar(c);
+        return IN_STRING;
+    } else if (c == '\'') {
+        putchar(c);
+        return IN_CHAR;
+    } else {
+        putchar(c);
+        return NORMAL;
+    }
+}
 
-  if (state == POTENTIAL_COMMENT) {
-    putchar('/');
-  }
+/* implement the AFTER_SLASH state of the DFA */
+enum State handleAfterSlash(int c, enum State currentState) {
+    if (c == '*') {
+        putchar(' ');
+        return IN_COMMENT;
+    } else {
+        putchar('/');
+        return handleNormal(c, NORMAL);
+    }
+}
 
-  return EXIT_SUCCESS;
+/* implement the IN_COMMENT state of the DFA */
+enum State handleInComment(int c, enum State currentState) {
+    if (c == '*') {
+        return AFTER_STAR;
+    } else if (c == '\n') {
+        putchar('\n');
+        return IN_COMMENT;
+    } else {
+        return IN_COMMENT;
+    }
+}
+
+/* implement the AFTER_STAR state of the DFA */
+enum State handleAfterStar(int c, enum State currentState) {
+    if (c == '/') {
+        return NORMAL;
+    } else {
+        return handleInComment(c, IN_COMMENT);
+    }
+}
+
+/* implement the IN_STRING state of the DFA */
+enum State handleInString(int c, enum State currentState) {
+    if (c == '"') {
+        putchar(c);
+        return NORMAL;
+    } else if (c == '\\') {
+        putchar(c);
+        return BACKSLASH_STRING;
+    } else {
+        putchar(c);
+        return IN_STRING;
+    }
+}
+
+/* implement the BACKSLASH_STRING state of the DFA */
+enum State handleBackslashString(int c, enum State currentState) {
+    putchar(c);
+    return IN_STRING;
+}
+
+/* implement the IN_CHAR state of the DFA */
+enum State handleInChar(int c, enum State currentState) {
+    if (c == '\'') {
+        putchar(c);
+        return NORMAL;
+    } else if (c == '\\') {
+        putchar(c);
+        return BACKSLASH_CHAR;
+    } else {
+        putchar(c);
+        return IN_CHAR;
+    }
+}
+
+/* implement the BACKSLASH_CHAR state of the DFA */
+enum State handleBackslashChar(int c, enum State currentState) {
+    putchar(c);
+    return IN_CHAR;
 }
