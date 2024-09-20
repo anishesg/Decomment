@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Macros to handle common actions
-#define HANDLE_NEWLINE() { putchar(c); lineNum++; }
+/* Macros to handle common actions */
+#define HANDLE_NEWLINE(c, lineNum) { putchar(c); lineNum++; }
 #define HANDLE_PUTCHAR(x) { putchar(x); }
 
-// Rearranged enum State names remain the same
+/* State definitions remain unchanged */
 enum State {
   NORMAL,
   POTENTIAL_COMMENT,
@@ -17,8 +17,8 @@ enum State {
   CHAR_ESC
 };
 
-// Re-arranged logic in the functions and using switch instead of some if-else
-enum State handleNormal(int c) {
+/* Updated function signatures to pass lineNum as a parameter */
+enum State handleNormal(int c, int* lineNum) {
   switch (c) {
     case '/':
       return POTENTIAL_COMMENT;
@@ -29,7 +29,7 @@ enum State handleNormal(int c) {
       HANDLE_PUTCHAR(c);
       return CHAR_LIT;
     case '\n':
-      HANDLE_NEWLINE();
+      HANDLE_NEWLINE(c, *lineNum);
       return NORMAL;
     default:
       HANDLE_PUTCHAR(c);
@@ -60,10 +60,10 @@ enum State handlePotentialComment(int c) {
   }
 }
 
-enum State handleInComment(int c) {
+enum State handleInComment(int c, int* lineNum) {
   switch (c) {
     case '\n':
-      HANDLE_NEWLINE();
+      HANDLE_NEWLINE(c, *lineNum);
       return IN_COMMENT;
     case '*':
       return STAR_COMMENT;
@@ -72,14 +72,14 @@ enum State handleInComment(int c) {
   }
 }
 
-enum State handleStarComment(int c) {
+enum State handleStarComment(int c, int* lineNum) {
   switch (c) {
     case '/':
       return NORMAL;
     case '*':
       return STAR_COMMENT;
     case '\n':
-      HANDLE_NEWLINE();
+      HANDLE_NEWLINE(c, *lineNum);
       return IN_COMMENT;
     default:
       return IN_COMMENT;
@@ -133,7 +133,7 @@ int main() {
       lineNum++;
     }
 
-    // Reordered case statements for variability
+    /* Reordered case statements for variability */
     switch (state) {
       case STRING_ESC:
         state = handleStringEsc(c);
@@ -142,17 +142,17 @@ int main() {
         state = handleCharEsc(c);
         break;
       case NORMAL:
-        state = handleNormal(c);
+        state = handleNormal(c, &lineNum);
         break;
       case POTENTIAL_COMMENT:
         commentStartLine = lineNum;
         state = handlePotentialComment(c);
         break;
       case IN_COMMENT:
-        state = handleInComment(c);
+        state = handleInComment(c, &lineNum);
         break;
       case STAR_COMMENT:
-        state = handleStarComment(c);
+        state = handleStarComment(c, &lineNum);
         break;
       case STRING_LIT:
         state = handleStringLit(c);
@@ -163,7 +163,7 @@ int main() {
     }
   }
 
-  // Keeping exit conditions intact
+  /* Keeping exit conditions intact */
   if (state == IN_COMMENT || state == STAR_COMMENT) {
     fprintf(stderr, "Error: line %d: unterminated comment\n", commentStartLine);
     return EXIT_FAILURE;
